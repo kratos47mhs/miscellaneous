@@ -1,82 +1,97 @@
+# 🔍 kube-dump.sh
 
-# Kubernetes Resource Dumper
+A robust Bash script to **export and backup Kubernetes resources** across one or multiple namespaces in a clean, human-readable format using `kubectl`, `kubectl-neat`, and `yq`.
 
-This script exports and cleans Kubernetes resources (e.g., Deployments, Services, PVCs) across one or more namespaces, saving them as neat, readable YAML files.
+---
 
-## 🧾 Features
+## 🧰 Features
 
-* Dumps specified Kubernetes resources.
-* Supports multiple namespaces.
-* Cleans up unnecessary metadata using [`kubectl-neat`](https://github.com/itaysk/kubectl-neat).
-* Outputs organized YAML files grouped by resource and namespace.
+- Dumps Kubernetes resources to YAML
+- Supports multiple namespaces and resource types
+- Formats output using [`kubectl-neat`](https://github.com/itaysk/kubectl-neat)
+- Saves files to structured directories: `./k8s-dump-YYYYMMDD-HHMMSS/`
+- Works with any valid `kubeconfig`
 
 ---
 
 ## 📦 Requirements
 
-* [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
-* [`kubectl-neat`](https://github.com/itaysk/kubectl-neat)
-* [`yq`](https://github.com/mikefarah/yq) (YAML processor)
+- [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
+- [`kubectl-neat`](https://github.com/itaysk/kubectl-neat)
+- [`yq`](https://github.com/mikefarah/yq) (v4+)
 
 ---
 
 ## 🚀 Usage
 
 ```bash
-./dump-k8s.sh [OPTIONS]
-```
+./kube-dump.sh [OPTIONS]
+````
 
 ### Options
 
-| Option                      | Description                                                                              |
-| --------------------------- | ---------------------------------------------------------------------------------------- |
-| `-k, --kubeconfig FILE`     | Specify kubeconfig file (default: first file in `$KUBECONFIG` or `~/.kube/`)             |
-| `-n, --namespace NAMESPACE` | Comma-separated list of namespaces (default: all namespaces)                             |
-| `-r, --resources RESOURCE`  | Comma-separated list of resource types (default: deployments,configmaps,services,pvc,pv) |
-| `-h, --help`                | Show help message and exit                                                               |
+| Option               | Description                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| `-k`, `--kubeconfig` | Path to kubeconfig file (default: uses first in `$KUBECONFIG` or `~/.kube/`)             |
+| `-n`, `--namespace`  | Comma-separated list of namespaces (default: all namespaces)                             |
+| `-r`, `--resources`  | Comma-separated list of resource types (default: deployments,configmaps,services,pvc,pv) |
+| `-h`, `--help`       | Show usage/help message                                                                  |
 
 ---
 
-## 📂 Output
-
-The script creates a timestamped folder such as:
+## 📂 Output Structure
 
 ```
-./k8s-dump-20250509-153012/
-└── deployments/
-    └── default/
-        └── my-deployment.yaml
+k8s-dump-20250509-143000/
+├── configmaps/
+│   └── default/
+│       └── my-config.yaml
+├── deployments/
+│   └── kube-system/
+│       └── coredns.yaml
+...
 ```
-
-Each file contains a neat YAML of the corresponding resource, stripped of unnecessary metadata.
 
 ---
 
 ## 🧪 Examples
 
-Dump Deployments and Services from `default` and `kube-system` namespaces:
+Dump all default resources from all namespaces:
 
 ```bash
-./dump-k8s.sh --namespace default,kube-system --resources deployments,services
+./kube-dump.sh
 ```
 
-Use a custom kubeconfig file:
+Dump specific resources from specific namespaces:
 
 ```bash
-./dump-k8s.sh -k ~/.kube/custom-config.yaml
+./kube-dump.sh -n default,kube-system -r deployments,services
+```
+
+Use a custom kubeconfig:
+
+```bash
+./kube-dump.sh -k ~/.kube/staging-config.yaml
 ```
 
 ---
 
-## 🛑 Error Handling
+## 💡 Tips
 
-* Fails early if `kubectl` or `kubectl-neat` are missing.
-* Warns and continues if specific namespace/resource combinations return no results.
+* Use version control (e.g., git) to track dumped configs over time.
+* Use `diff` tools to compare changes between dumps.
+* Ideal for backup, troubleshooting, or auditing.
 
 ---
 
-## ✅ Notes
+## 📜 License
 
-* The script uses `set -euo pipefail` for safety.
-* It selects the first available file in `~/.kube/` if no kubeconfig is provided and `$KUBECONFIG` is unset.
-* Uses `yq` to pretty-print cleaned JSON output into YAML.
+MIT License
+
+---
+
+## 👤 Author
+
+Created by DevOps engineers who needed something more predictable than `kubectl get all` and more readable than raw JSON.
+
+Pull requests welcome! 🙌

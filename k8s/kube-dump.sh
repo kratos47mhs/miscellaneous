@@ -89,22 +89,41 @@ for res in "${RESOURCES[@]}"; do
   echo "🔵 Dumping $res..."
   mkdir -p "${OUT_DIR}/${res}"
 
+  items=()
+
   if [[ ${#NAMESPACES[@]} -eq 0 ]]; then
-    mapfile -t items < <(kubectl get "$res" -A -o name)
+    mapfile -t items < <(kubectl get "$res" -A -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' 2>/dev/null | sed '/^$/d' || true)
   else
-    items=()
     for ns in "${NAMESPACES[@]}"; do
-      mapfile -t ns_items < <(kubectl get "$res" -n "$ns" -o name 2>/dev/null || true)
+      mapfile -t ns_items < <(kubectl get "$res" -n "$ns" -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' 2>/dev/null | sed '/^$/d' || true)
       items+=("${ns_items[@]}")
     done
   fi
 
+  if [[ ${#items[@]} -eq 0 ]]; then
+    echo "⚠️  No resources found for $res, skipping."
+    continue
+  fi
+
   for item in "${items[@]}"; do
-    ns=$(kubectl get "$item" -o jsonpath='{.metadata.namespace}' 2>/dev/null || echo "default")
-    name=$(basename "$item")
+    ns="${item%%/*}"
+    name="${item##*/}"
+
+    if [[ -z "$ns" || -z "$name" ]]; then
+      echo "⚠️  Could not determine namespace or name for item [$item], skipping."
+      continue
+    fi
+
     mkdir -p "${OUT_DIR}/${res}/${ns}"
 
-    kubectl get "$item" -o json | kubectl neat | yq -P e - >"${OUT_DIR}/${res}/${ns}/${name}.yaml"
+    # Check if the resource exists before dumping
+    if ! kubectl get "$res" -n "$ns" "$name" &>/dev/null; then
+      echo "⚠️  Resource $res/$name in namespace $ns not found, skipping."
+      continue
+    fi
+
+    # Dump the resource and format with kubectl-neat and yq
+    kubectl get "$res" -n "$ns" "$name" -o json | kubectl neat | yq -P e - >"${OUT_DIR}/${res}/${ns}/${name}.yaml"
   done
 done
 
